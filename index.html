@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FakeTopia - Premium Cloud Multiplayer</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // CONFIG FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3IezFL9ftIW45kWwRIxDbVpr6NilQ6lI",
+            authDomain: "faketopia-87223.firebaseapp.com",
+            projectId: "faketopia-87223",
+            storageBucket: "faketopia-87223.firebasestorage.app",
+            messagingSenderId: "924896042252",
+            appId: "1:924896042252:web:6e95a0c5284f191b29a244",
+            measurementId: "G-RG9CY5GG5J"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+    </script>
+
+    <style>
+        :root { --cyan: #00FFFF; --green: #00FF00; --red: #FF0000; --gold: #FFD700; --ui-bg: rgba(0,0,0,0.7); }
+        body { margin: 0; background: #000; overflow: hidden; font-family: "Century Gothic", sans-serif; user-select: none; touch-action: none; }
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .login-box { background: #222; border: 4px solid #fff; border-radius: 10px; padding: 30px; text-align: center; width: 320px; box-shadow: 0 0 30px var(--cyan); }
+        .login-title { color: var(--cyan); font-size: 38px; font-weight: 900; margin-bottom: 20px; text-transform: uppercase; }
+        .login-input { width: 90%; padding: 12px; margin: 8px 0; background: #333; color: white; border: 1px solid #555; border-radius: 5px; outline: none; }
+        .login-btn { width: 95%; padding: 12px; margin-top: 10px; cursor: pointer; font-weight: bold; border:none; border-radius:5px; transition: 0.2s; text-transform: uppercase; }
+        .btn-connect { background: var(--green); color: #000; }
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        .loader { border: 6px solid #333; border-top: 6px solid var(--green); border-radius: 50%; width: 65px; height: 65px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 5000; }
+        #bottom-panel { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; gap: 8px; align-items: flex-end; pointer-events: auto; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 20px; }
+        .inv-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 58px; height: 58px; background: #333; border: 2px solid #666; border-radius: 12px; cursor: pointer; position: relative; }
+        .inv-item.active { border-color: yellow; background: #444; }
+        .inv-count { position: absolute; bottom: 4px; right: 6px; font-weight: bold; font-size: 12px; color: #fff; }
+        #inventory-bar { display: flex; gap: 8px; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <script src="db.items.js"></script> 
+    <script src="db.shop.js"></script> 
+    <script src="db.world.js"></script> 
+    <script src="db.player.js"></script> 
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <div class="login-title">FakeTopia</div>
+        <input type="text" id="in-user" class="login-input" placeholder="Username">
+        <input type="password" id="in-pass" class="login-input" placeholder="Password">
+        <button class="login-btn btn-connect" onclick="actionLogin()">CONNECT</button>
+        <button class="login-btn" style="background:#0066CC;color:white" onclick="actionRegister()">CREATE ACCOUNT</button>
+        <div id="msg-box" style="color:var(--red);margin-top:10px;font-size:14px;font-weight:bold;"></div>
+    </div>
+</div>
+
+<div id="loading-screen"><div class="loader"></div><div style="color:#0f0;margin-top:20px;">SYNCING CLOUD...</div></div>
+
+<div id="ui-layer">
+    <div id="world-info" style="position:absolute; top:15px; left:50%; transform:translateX(-50%); color:#0f0; font-weight:900; font-size:24px; text-shadow:2px 2px #000;"><span id="world-name">START</span></div>
+    <div id="hud-top" style="position:absolute; top:15px; right:15px; color:var(--cyan); font-weight:bold;">💎 <span id="gem-count">0</span></div>
+    <div id="bottom-panel">
+        <div id="inventory-bar"></div>
+        <button class="inv-item" style="background:#555; color:white; font-weight:bold;" onclick="doLogout()">LOGOUT</button>
+    </div>
+</div>
+
+<script>
+    let otherPlayers = {}; 
+    let game, playerContainer, playerBody, playerHand, nameTag, map, layer, keysWASD;
+    let hotbar = [0, null, null, null], selectedSlotIndex = 0;
+    const TILE_SIZE = 32, MAP_W = 100, MAP_H = 60;
+
+    // --- AUTH LOGIC ---
+    async function actionLogin(){
+        let u = document.getElementById('in-user').value.trim();
+        let p = document.getElementById('in-pass').value.trim();
+        const snap = await db.ref('users/' + u.toLowerCase()).once('value');
+        const data = snap.val();
+        if(data && data.password === p) startSession(data.username);
+        else document.getElementById('msg-box').innerText = "Invalid Login!";
+    }
+
+    async function actionRegister(){
+        let u = document.getElementById('in-user').value.trim();
+        let p = document.getElementById('in-pass').value.trim();
+        if(u.length < 3) return alert("Username too short!");
+        const check = await db.ref('users/' + u.toLowerCase()).once('value');
+        if(check.exists()) return alert("Taken!");
+        await db.ref('users/' + u.toLowerCase()).set({ username: u, password: p });
+        alert("Success! Now Connect.");
+    }
+
+    function startSession(u){
+        localStorage.setItem('gt_active_session', u);
+        document.getElementById('login-screen').style.display='none';
+        document.getElementById('loading-screen').style.display='flex';
+        loadPlayer(u).then(() => { setTimeout(() => startGame(), 500); });
+    }
+
+    // --- GAME ENGINE ---
+    const config = { type: Phaser.AUTO, width: window.innerWidth, height: window.innerHeight, backgroundColor: '#95ebff', pixelArt: true, physics: { default: 'arcade', arcade: { gravity: { y: 1200 } } }, scene: { preload, create, update } };
+    function startGame(){ if(!game) game = new Phaser.Game(config); else game.scene.scenes[0].scene.restart(); }
+
+    function preload(){
+        let g=this.make.graphics({x:0,y:0,add:false});
+        g.clear();g.fillStyle(0xFFE4B5,1);g.fillRect(0,0,20,30);g.generateTexture('char_body',20,30);
+    }
+
+    function create(){
+        let textureWidth=32*20, canvas=this.textures.createCanvas('tiles',textureWidth,32), ctx=canvas.context;
+        Object.keys(BLOCKS).forEach(id=>{
+            if(id==0)return; let d=BLOCKS[id],posX=id*32;
+            ctx.fillStyle='#'+d.color.toString(16).padStart(6,'0'); ctx.fillRect(posX,0,32,32);
+        });
+        canvas.refresh();
+        document.getElementById('loading-screen').style.display='none';
+        document.getElementById('ui-layer').style.display='block';
+        initGameWorld(this);
+    }
+
+    async function initGameWorld(scene){
+        let t = backpack.lastWorld || "START";
+        const data = await loadWorld(t); // FIX: Menunggu data world dari Firebase
+        
+        document.getElementById('world-name').innerText = currentWorldName;
+        map = scene.make.tilemap({ data: data.map, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
+        const tileset = map.addTilesetImage('tiles');
+        layer = map.createLayer(0, tileset, 0, 0);
+        map.setCollision(Object.keys(BLOCKS).filter(k=>BLOCKS[k].type!=='fist'&&BLOCKS[k].type!=='door').map(Number));
+        
+        playerContainer = scene.add.container(200, 200);
+        playerContainer.setSize(20, 30); scene.physics.world.enable(playerContainer);
+        playerBody = scene.add.sprite(0,0,'char_body');
+        nameTag = scene.add.text(0,-25, backpack.username, {fontSize:'12px',fontStyle:'bold'}).setOrigin(0.5);
+        playerContainer.add([playerBody, nameTag]);
+        playerContainer.body.setCollideWorldBounds(true).setDragX(1000);
+        scene.physics.add.collider(playerContainer, layer);
+        scene.cameras.main.startFollow(playerContainer, true, 0.1, 0.1).setZoom(1.5);
+        keysWASD = scene.input.keyboard.addKeys('W,A,S,D');
+
+        // MULTIPLAYER LISTENER (Biar bisa liat player lain)
+        db.ref('presence/' + currentWorldName).on('value', snapshot => {
+            const players = snapshot.val();
+            if(!players) return;
+            Object.keys(players).forEach(name => {
+                if(name === backpack.username) return;
+                if(!otherPlayers[name]){
+                    otherPlayers[name] = scene.add.container(players[name].x, players[name].y);
+                    let b = scene.add.sprite(0,0,'char_body');
+                    let t = scene.add.text(0,-25, name, {fontSize:'10px', backgroundColor:'#000'});
+                    otherPlayers[name].add([b,t]);
+                }
+                otherPlayers[name].x = players[name].x;
+                otherPlayers[name].y = players[name].y;
+            });
+        });
+        updateUI();
+    }
+
+    function update(){
+        if(!playerContainer) return;
+        let ml = keysWASD.A.isDown; let mr = keysWASD.D.isDown; let mj = keysWASD.W.isDown;
+        if(ml){ playerContainer.body.setAccelerationX(-1200); }
+        else if(mr){ playerContainer.body.setAccelerationX(1200); }
+        else playerContainer.body.setAccelerationX(0);
+        if(mj && playerContainer.body.onFloor()) playerContainer.body.setVelocityY(-600);
+        
+        // Broadcast posisi ke Cloud
+        db.ref('presence/' + currentWorldName + '/' + backpack.username).set({
+            x: playerContainer.x, y: playerContainer.y
+        });
+    }
+
+    function updateUI(){ document.getElementById('gem-count').innerText=backpack.gems; renderHotbar(); }
+    function renderHotbar(){
+        const b = document.getElementById('inventory-bar'); b.innerHTML = "";
+        hotbar.forEach((id, i) => {
+            let d = document.createElement('div');
+            d.className = `inv-item ${i === selectedSlotIndex ? 'active' : ''}`;
+            d.innerHTML = `<span class="inv-count">${id === 0 ? "∞" : (backpack.items[id] || 0)}</span>`;
+            b.appendChild(d);
+        });
+    }
+    function doLogout(){ localStorage.removeItem('gt_active_session'); location.reload(); }
+</script>
+</body>
+</html>
