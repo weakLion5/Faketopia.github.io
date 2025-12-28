@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FakeTopia - Premium Cloud Multiplayer</title>
-    
+    <title>Fake Topia</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // CONFIG FIREBASE
+        // CONFIG DARI SCREENSHOT KAMU
         const firebaseConfig = {
             apiKey: "AIzaSyD3IezFL9ftIW45kWwRIxDbVpr6NilQ6lI",
             authDomain: "faketopia-87223.firebaseapp.com",
@@ -22,175 +21,675 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
     </script>
-
     <style>
-        :root { --cyan: #00FFFF; --green: #00FF00; --red: #FF0000; --gold: #FFD700; --ui-bg: rgba(0,0,0,0.7); }
-        body { margin: 0; background: #000; overflow: hidden; font-family: "Century Gothic", sans-serif; user-select: none; touch-action: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: "Century Gothic", sans-serif; user-select: none; touch-action: none; -webkit-touch-callout: none; }
+        
+        /* ROTATE DEVICE OVERLAY */
+        #rotate-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000; z-index: 20000; display: none; 
+            flex-direction: column; justify-content: center; align-items: center; color: white;
+        }
+        .rotate-icon { font-size: 50px; animation: rotateAnim 2s infinite; margin-bottom: 20px; }
+        @keyframes rotateAnim { 0% { transform: rotate(0deg); } 25% { transform: rotate(-90deg); } 100% { transform: rotate(-90deg); } }
+        @media screen and (orientation: portrait) and (max-width: 1024px) { #rotate-overlay { display: flex; } }
+
+        /* GENERAL UI */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .login-box { background: #222; border: 4px solid #fff; border-radius: 10px; padding: 30px; text-align: center; width: 320px; box-shadow: 0 0 30px var(--cyan); }
-        .login-title { color: var(--cyan); font-size: 38px; font-weight: 900; margin-bottom: 20px; text-transform: uppercase; }
-        .login-input { width: 90%; padding: 12px; margin: 8px 0; background: #333; color: white; border: 1px solid #555; border-radius: 5px; outline: none; }
-        .login-btn { width: 95%; padding: 12px; margin-top: 10px; cursor: pointer; font-weight: bold; border:none; border-radius:5px; transition: 0.2s; text-transform: uppercase; }
-        .btn-connect { background: var(--green); color: #000; }
-        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
-        .loader { border: 6px solid #333; border-top: 6px solid var(--green); border-radius: 50%; width: 65px; height: 65px; animation: spin 1s linear infinite; }
+        .login-box { background: #222; border: 4px solid #fff; border-radius: 10px; padding: 30px; text-align: center; width: 300px; }
+        .login-title { color: #00FFFF; font-size: 32px; font-weight: bold; margin-bottom: 20px; }
+        .login-input { width: 90%; padding: 10px; margin: 5px 0; background: #333; color: white; border: 1px solid #555; }
+        .login-btn { width: 95%; padding: 10px; margin-top: 10px; cursor: pointer; font-weight: bold; }
+        #saved-accounts { margin-top: 20px; width: 300px; max-height: 150px; overflow-y: auto; }
+        .acc-item { background: #444; padding: 5px; margin: 2px; border: 1px solid #666; cursor: pointer; color: #DDD; font-size: 12px; }
+        .acc-item:hover { background: #666; color: #FFF; border-color: #00FFFF; }
+
+        /* LOADING SCREEN */
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: all; }
+        .loader { border: 8px solid #333; border-top: 8px solid #00FF00; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { color: #00FF00; margin-top: 20px; font-size: 20px; font-weight: bold; }
+
+        /* UI LAYER */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 5000; }
-        #bottom-panel { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; gap: 8px; align-items: flex-end; pointer-events: auto; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 20px; }
-        .inv-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 58px; height: 58px; background: #333; border: 2px solid #666; border-radius: 12px; cursor: pointer; position: relative; }
-        .inv-item.active { border-color: yellow; background: #444; }
-        .inv-count { position: absolute; bottom: 4px; right: 6px; font-weight: bold; font-size: 12px; color: #fff; }
-        #inventory-bar { display: flex; gap: 8px; }
+        .interactive { pointer-events: auto; }
+
+        #sb-container { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); width: 80%; text-align: center; pointer-events: none; z-index: 200; }
+        .sb-msg { background: rgba(0, 0, 0, 0.7); border: 2px solid #FFD700; color: #FFD700; padding: 10px; font-size: 16px; font-weight: bold; margin-bottom: 5px; text-shadow: 2px 2px 0 #000; border-radius: 10px; animation: fadeInOut 5s forwards; }
+        .osb-msg { background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000); background-size: 400%; border: 3px solid #FFFFFF; color: #FFFFFF; padding: 15px; font-size: 20px; font-weight: 900; margin-bottom: 10px; text-shadow: 3px 3px 0 #000; border-radius: 15px; box-shadow: 0 0 20px rgba(255,255,255,0.8); animation: fadeInOut 8s forwards, rainbow 10s linear infinite; text-transform: uppercase; letter-spacing: 1px; }
+        @keyframes fadeInOut { 0% { opacity:0; transform:translateY(-20px); } 10% { opacity:1; transform:translateY(0); } 90% { opacity:1; } 100% { opacity:0; } }
+        @keyframes rainbow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        #hud-top { position: absolute; top: 10px; right: 10px; text-align: right; color: #00FFFF; text-shadow: 2px 2px 0 #000; font-size: 18px; font-weight: bold; }
+        #world-info { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); text-align: center; text-shadow: 2px 2px 0 #000; }
+        #world-name { color: #00FF00; font-size: 24px; font-weight: bold; }
+        #world-owner { color: #FFFF00; font-size: 14px; font-weight: bold; }
+
+        #chat-box { position: absolute; top: 100px; left: 10px; width: 400px; height: 250px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; overflow-y: hidden; display: flex; flex-direction: column-reverse; padding: 5px; pointer-events: none; z-index: 50; }
+        .chat-line { font-size: 14px; font-weight: bold; text-shadow: 1px 1px 0 #000; margin: 1px 0; font-family: 'Arial', sans-serif; }
+        .chat-system { color: #FF5555; } .chat-sb { color: #FFFF00; } .chat-osb { color: #00FFFF; text-shadow: 0 0 5px #00FFFF; } .chat-info { color: #55FF55; } .chat-normal { color: #FFFFFF; }
+        
+        #chat-input-container { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: none; pointer-events: auto; z-index: 6000; }
+        #chat-input { width: 400px; padding: 10px; border-radius: 5px; background: rgba(0,0,0,0.8); color: white; border: 2px solid white; outline: none; font-weight: bold; }
+        
+        #bottom-panel { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; align-items: flex-end; pointer-events: auto; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 15px; z-index: 5001; }
+        #inventory-bar { display: flex; gap: 5px; }
+        
+        .inv-item { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.9; cursor: pointer; width: 50px; height: 50px; background: #444; border: 2px solid #888; border-radius: 5px; color: white; font-size: 10px; position: relative; overflow: hidden; pointer-events: auto; }
+        .inv-item.active { border: 2px solid yellow; background: #555; transform: scale(1.1); }
+        .inv-count { position: absolute; bottom: 2px; right: 2px; font-weight: bold; text-shadow: 1px 1px 0 #000; z-index: 2; }
+        .inv-name { margin-top: -20px; font-size: 9px; font-weight: bold; text-shadow: 1px 1px 0 #000; z-index: 3; pointer-events: none; }
+        .color-preview { width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 0; }
+        .icon-img { width: 32px; height: 32px; object-fit: contain; z-index: 1; }
+
+        .btn-ui { color: white; border: 2px solid white; width: 50px; height: 50px; font-weight: bold; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; margin: 0 2px; pointer-events: auto; }
+        #btn-shop { background: #d9534f; } #btn-backpack { background: #8B4513; } #btn-drop { background: #5bc0de; } #btn-menu { background: #555; } #btn-chat { background: #00AA00; display: none; } 
+
+        #mobile-controls { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5500; }
+        .dpad-btn { position: absolute; width: 80px; height: 80px; background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; color: white; font-size: 30px; display: flex; justify-content: center; align-items: center; pointer-events: auto; user-select: none; -webkit-user-select: none; backdrop-filter: blur(2px); }
+        .dpad-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.95); }
+        #btn-left { bottom: 30px; left: 20px; } #btn-right { bottom: 30px; left: 120px; } #btn-jump { bottom: 30px; right: 20px; background: rgba(0, 255, 0, 0.2); } #btn-chat-mobile { bottom: 130px; right: 20px; width: 50px; height: 50px; font-size: 20px; background: rgba(0, 170, 0, 0.5); border-radius: 10px; }
+
+        /* MODALS */
+        .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; border: 4px solid white; border-radius: 10px; padding: 20px; width: 350px; text-align: center; color: white; display: none; pointer-events: auto; z-index: 7000; box-shadow: 0 0 20px #000; }
+        #backpack-grid { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; max-height: 300px; overflow-y: auto; margin-top: 10px; }
+        .pack-slot { width: 50px; height: 50px; background: rgba(0,0,0,0.5); border: 1px solid #555; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; pointer-events: auto; }
+        
+        #shop-modal { width: 500px; background: #1a1a1a; border: 4px solid #FFD700; box-shadow: 0 0 30px #FFD700; }
+        #shop-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 350px; overflow-y: auto; padding: 10px; }
+        .shop-card { background: #333; border: 2px solid #555; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.2s; pointer-events: auto; }
+        .shop-card:hover { border-color: #FFD700; transform: translateY(-3px); background: #444; }
+        .shop-img { width: 32px; height: 32px; margin-bottom: 5px; border: 1px solid #000; display:flex; align-items:center; justify-content:center; background: #000; }
+        .shop-name { font-size: 11px; font-weight: bold; color: white; margin-bottom: 5px; text-align: center; }
+        .shop-price { color: #00FFFF; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+        
+        #buy-modal { display: none; z-index: 7500; background: #111; border: 2px solid #00AA00; }
+        .buy-info { margin: 15px 0; font-size: 14px; color: #ddd; }
+        .buy-input { width: 60px; padding: 5px; text-align: center; font-weight: bold; background: #333; color: white; border: 1px solid #555; margin-right: 10px; }
+        .total-price { color: #FFD700; font-weight: bold; font-size: 16px; display: block; margin-top: 10px; }
+
+        /* NEWBI CONFIG MODAL */
+        #newbi-modal { display: none; z-index: 8000; background: #1a1a1a; border: 3px solid #00FFFF; width: 400px; }
+        .config-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; justify-content: center; }
+        .config-input { width: 80px; padding: 5px; background: #333; border: 1px solid #666; color: white; }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <script src="db.items.js"></script> 
-    <script src="db.shop.js"></script> 
-    <script src="db.world.js"></script> 
-    <script src="db.player.js"></script> 
+    <script src="db.auth.js"></script> <script src="db.items.js"></script> 
+    <script src="db.shop.js"></script> <script src="db.world.js"></script> <script src="db.player.js"></script> 
 </head>
 <body>
 
+<div id="rotate-overlay"><div class="rotate-icon">↻</div><h2>PLEASE ROTATE DEVICE</h2></div>
+
 <div id="login-screen">
     <div class="login-box">
-        <div class="login-title">FakeTopia</div>
-        <input type="text" id="in-user" class="login-input" placeholder="Username">
+        <div class="login-title">GT CLONE</div>
+        <input type="text" id="in-user" class="login-input" placeholder="GrowID">
         <input type="password" id="in-pass" class="login-input" placeholder="Password">
-        <button class="login-btn btn-connect" onclick="actionLogin()">CONNECT</button>
+        <button class="login-btn" style="background:#00AA00;color:white" onclick="actionLogin()">CONNECT</button>
         <button class="login-btn" style="background:#0066CC;color:white" onclick="actionRegister()">CREATE ACCOUNT</button>
-        <div id="msg-box" style="color:var(--red);margin-top:10px;font-size:14px;font-weight:bold;"></div>
+        <div id="msg-box" style="color:red;margin-top:10px;"></div>
+        <div style="margin-top:15px; color:#888; font-size:10px;">SWITCH ACCOUNT:</div>
+        <div id="saved-accounts"></div>
     </div>
 </div>
 
-<div id="loading-screen"><div class="loader"></div><div style="color:#0f0;margin-top:20px;">SYNCING CLOUD...</div></div>
+<div id="loading-screen"><div class="loader"></div><div class="loading-text">ENTERING WORLD...</div></div>
 
 <div id="ui-layer">
-    <div id="world-info" style="position:absolute; top:15px; left:50%; transform:translateX(-50%); color:#0f0; font-weight:900; font-size:24px; text-shadow:2px 2px #000;"><span id="world-name">START</span></div>
-    <div id="hud-top" style="position:absolute; top:15px; right:15px; color:var(--cyan); font-weight:bold;">💎 <span id="gem-count">0</span></div>
-    <div id="bottom-panel">
+    <div id="sb-container"></div>
+    <div id="world-info"><div id="world-name">START</div><div id="world-owner">No Owner</div></div>
+    <div id="hud-top">💎 <span id="gem-count">0</span></div>
+    <div id="chat-box"></div>
+    
+    <div id="chat-input-container" class="interactive">
+        <input type="text" id="chat-input" maxlength="100" autocomplete="off" placeholder="Press Enter to chat">
+        <button onclick="sendChat()" style="position:absolute;right:0;top:0;height:100%;background:#00AA00;color:white;border:none;cursor:pointer;">➤</button>
+    </div>
+    
+    <div id="mobile-controls">
+        <div id="btn-left" class="dpad-btn">⬅</div>
+        <div id="btn-right" class="dpad-btn">➡</div>
+        <div id="btn-jump" class="dpad-btn">⬆</div>
+        <div id="btn-chat-mobile" class="dpad-btn" onclick="forceOpenChat()">💬</div>
+    </div>
+
+    <div id="bottom-panel" class="interactive">
+        <button id="btn-shop" class="btn-ui" onclick="openShop()">SHOP</button>
         <div id="inventory-bar"></div>
-        <button class="inv-item" style="background:#555; color:white; font-weight:bold;" onclick="doLogout()">LOGOUT</button>
+        <button id="btn-backpack" class="btn-ui" onclick="toggleBackpack()">🎒</button>
+        <button id="btn-drop" class="btn-ui" onclick="openDropUI()">DROP</button>
+        <button id="btn-menu" class="btn-ui" onclick="openMenu()">MENU</button>
+    </div>
+
+    <div id="backpack-modal" class="modal"><h3>Backpack</h3><div id="backpack-grid"></div><button onclick="closeModals()" style="width:100%;margin-top:10px;background:red;color:white;padding:5px;">CLOSE</button></div>
+    <div id="drop-modal" class="modal"><h3>Drop</h3><input type="number" id="drop-num" value="1" style="width:50px"><button onclick="confirmDrop()" style="background:green;color:white;padding:5px;">OK</button><button onclick="closeModals()" style="background:red;color:white;padding:5px;">X</button></div>
+    <div id="shop-modal" class="modal"><h3 style="color:#FFD700;border-bottom:1px solid #555;padding-bottom:10px;">✨ MARKETPLACE ✨</h3><div id="shop-list"></div><button onclick="closeModals()" style="background:#444;color:white;padding:10px;width:100%;margin-top:15px;font-weight:bold;">EXIT SHOP</button></div>
+    <div id="buy-modal" class="modal"><h3 style="color:#00FF00">CONFIRM PURCHASE</h3><div class="buy-info">Buying: <b id="buy-name" style="color:#00FFFF">Item</b><br>Price per unit: <span id="buy-price">100</span> 💎</div><div style="margin-bottom:15px;">Amount: <input type="number" id="buy-amount" class="buy-input" value="1" min="1" oninput="updateBuyTotal()"></div><span class="total-price">Total: <span id="buy-total">100</span> 💎</span><br><br><button onclick="executeBuy()" style="background:green;color:white;padding:8px 20px;font-weight:bold;cursor:pointer;">BUY NOW</button><button onclick="document.getElementById('buy-modal').style.display='none'" style="background:red;color:white;padding:8px 20px;font-weight:bold;cursor:pointer;">CANCEL</button></div>
+    <div id="menu-modal" class="modal"><h3>Menu</h3><button onclick="closeModals()" style="width:100%;margin:5px 0;background:#444;color:white;padding:10px;">RESUME</button><button onclick="doLogout()" style="width:100%;margin:5px 0;background:#d9534f;color:white;padding:10px;">LOGOUT</button></div>
+
+    <div id="newbi-modal" class="modal">
+        <h3 style="color:#00FFFF">Starter Pack Config</h3>
+        <div style="margin:10px 0; text-align:left;">
+            <label>Starting Gems:</label>
+            <input type="number" id="newbi-gems" class="config-input" value="1000">
+        </div>
+        <div style="border-top:1px solid #555; padding:5px 0; max-height:200px; overflow-y:auto;" id="newbi-items-list">
+            </div>
+        <button onclick="addNewbiItemRow()" style="background:#555;color:white;padding:5px;width:100%;margin-bottom:10px;">+ Add Item</button>
+        <div style="display:flex; gap:10px;">
+            <button onclick="saveNewbiSettings()" style="background:green;color:white;padding:10px;width:50%;">SAVE</button>
+            <button onclick="document.getElementById('newbi-modal').style.display='none'" style="background:red;color:white;padding:10px;width:50%;">CANCEL</button>
+        </div>
     </div>
 </div>
 
 <script>
-    let otherPlayers = {}; 
-    let game, playerContainer, playerBody, playerHand, nameTag, map, layer, keysWASD;
-    let hotbar = [0, null, null, null], selectedSlotIndex = 0;
-    const TILE_SIZE = 32, MAP_W = 100, MAP_H = 60;
+// --- GLOBAL VARS ---
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+let mobileState = { left: false, right: false, jump: false };
 
-    // --- AUTH LOGIC ---
-    async function actionLogin(){
-        let u = document.getElementById('in-user').value.trim();
-        let p = document.getElementById('in-pass').value.trim();
-        const snap = await db.ref('users/' + u.toLowerCase()).once('value');
-        const data = snap.val();
-        if(data && data.password === p) startSession(data.username);
-        else document.getElementById('msg-box').innerText = "Invalid Login!";
+// --- CHAT SYSTEM ---
+function logChat(msg,type="normal"){let b=document.getElementById('chat-box');let d=document.createElement('div');d.className=`chat-line chat-${type}`;d.innerHTML=msg;b.prepend(d);if(b.children.length>20)b.lastChild.remove();}
+function clearChat(){document.getElementById('chat-box').innerHTML="";}
+function showSuperBroadcast(s,m,w){let c=document.getElementById('sb-container'),d=document.createElement('div');d.className='sb-msg';let wd=`[${w}]`;if(w==="JAMMED")wd=`[<span style="color:#FF0000">JAMMED</span>]`;d.innerHTML=`📢 <b>[SB] ${wd} ${s}:</b> ${m}`;c.appendChild(d);setTimeout(()=>{d.remove();},5000);}
+function showOwnerBroadcast(s,m){let c=document.getElementById('sb-container'),d=document.createElement('div');d.className='osb-msg';d.innerHTML=`👑 <b>[OWNER] ${s}</b><br>${m}`;c.appendChild(d);setTimeout(()=>{d.remove();},8000);}
+function showPlayerChat(msg) {
+    if(!game || !game.scene || !game.scene.scenes[0]) return;
+    let scene = game.scene.scenes[0];
+    if(currentChatBubble) { currentChatBubble.destroy(); }
+    currentChatBubble = scene.add.container(playerContainer.x, playerContainer.y - 50);
+    let text = scene.add.text(0, 0, msg, { fontSize: '14px', fontFamily: 'Century Gothic', color: '#FFFFFF', align: 'center', wordWrap: { width: 200 } }).setOrigin(0.5);
+    let bg = scene.add.rectangle(0, 0, text.width + 10, text.height + 10, 0x000000, 0.5).setOrigin(0.5);
+    currentChatBubble.add([bg, text]);
+    scene.time.delayedCall(4000, () => { if(currentChatBubble && currentChatBubble.active) { currentChatBubble.destroy(); currentChatBubble = null; } });
+}
+
+// --- AUTH & SESSION ---
+function findCaseInsensitiveUser(inputUser) {
+    for (let i = 0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        if (key.startsWith('gt_user_')) {
+            let realUser = key.substring(8);
+            if (realUser.toLowerCase() === inputUser.toLowerCase()) { return realUser; }
+        }
     }
-
-    async function actionRegister(){
-        let u = document.getElementById('in-user').value.trim();
-        let p = document.getElementById('in-pass').value.trim();
-        if(u.length < 3) return alert("Username too short!");
-        const check = await db.ref('users/' + u.toLowerCase()).once('value');
-        if(check.exists()) return alert("Taken!");
-        await db.ref('users/' + u.toLowerCase()).set({ username: u, password: p });
-        alert("Success! Now Connect.");
+    return null;
+}
+function loadSavedAccounts(){if(typeof getAllUsers!=='function')return;const u=getAllUsers(),c=document.getElementById('saved-accounts');c.innerHTML="";Object.keys(u).forEach(k=>{let d=document.createElement('div');d.className='acc-item';d.innerText=k;d.onclick=()=>{document.getElementById('in-user').value=k;document.getElementById('in-pass').focus();};c.appendChild(d);});}
+function actionRegister(){
+    let u=document.getElementById('in-user').value.trim(), p=document.getElementById('in-pass').value.trim();
+    if(typeof registerUser!=='function'){alert("db.auth.js missing!");return;}
+    let r=registerUser(u,p);
+    document.getElementById('msg-box').innerText=r.msg; loadSavedAccounts();
+}
+// Ganti actionLogin di index.html kamu
+async function actionLogin(){
+    let inputUser = document.getElementById('in-user').value.trim();
+    let p = document.getElementById('in-pass').value.trim();
+    if(typeof loginUser !== 'function') return;
+    
+    // Tunggu jawaban dari Firebase
+    let r = await loginUser(inputUser, p); 
+    if(r.success){ 
+        startSession(inputUser); 
+    } else {
+        document.getElementById('msg-box').innerText = r.msg;
     }
+}
 
-    function startSession(u){
-        localStorage.setItem('gt_active_session', u);
-        document.getElementById('login-screen').style.display='none';
-        document.getElementById('loading-screen').style.display='flex';
-        loadPlayer(u).then(() => { setTimeout(() => startGame(), 500); });
+// Ganti actionRegister di index.html kamu
+async function actionRegister(){
+    let u = document.getElementById('in-user').value.trim();
+    let p = document.getElementById('in-pass').value.trim();
+    if(typeof registerUser !== 'function') return;
+    
+    let r = await registerUser(u, p);
+    document.getElementById('msg-box').innerText = r.msg;
+}
+function startSession(username) {localStorage.setItem('gt_active_session', username);isModalOpen = false; isChatting = false; isDancing = false;document.getElementById('login-screen').style.display='none'; document.getElementById('loading-screen').style.display='flex';loadPlayer(username).then(() => { startGame(); });}
+window.onload = function() {
+    let activeUser = localStorage.getItem('gt_active_session'); 
+    if(activeUser) { startSession(activeUser); } else { loadSavedAccounts(); } 
+    if(isMobile) { document.getElementById('mobile-controls').style.display = 'block'; setupMobileControls(); }
+    let inp = document.getElementById('chat-input'); 
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { sendChat(); e.stopPropagation(); } else if (e.key === 'Escape') { closeChatUI(); } }); 
+    inp.addEventListener('focus', () => { isChatting = true; if(game && game.scene.scenes[0]) game.scene.scenes[0].input.keyboard.clearCaptures(); });
+    window.addEventListener('wheel', (e) => { if(isModalOpen || !game || !game.scene || !game.scene.scenes[0]) return; let cam = game.scene.scenes[0].cameras.main; let zoom = Phaser.Math.Clamp(cam.zoom + (e.deltaY > 0 ? -0.1 : 0.1), 0.5, 3.0); cam.setZoom(zoom); });
+};
+function doLogout() {
+    setPlayerLocation(currentWorldName); saveWorld(); savePlayer();
+    localStorage.removeItem('gt_active_session');
+    if(game){ game.destroy(true); game=null; }
+    document.getElementById('ui-layer').style.display='none'; document.getElementById('menu-modal').style.display='none'; document.getElementById('loading-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; document.getElementById('in-pass').value=''; loadSavedAccounts(); document.getElementById('chat-input').blur();
+}
+
+function setupMobileControls() {
+    window.oncontextmenu = function(event) { event.preventDefault(); event.stopPropagation(); return false; };
+    function bind(id, key) {
+        let btn = document.getElementById(id);
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); mobileState[key] = true; });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); mobileState[key] = false; });
     }
+    bind('btn-left', 'left'); bind('btn-right', 'right'); bind('btn-jump', 'jump');
+}
 
-    // --- GAME ENGINE ---
-    const config = { type: Phaser.AUTO, width: window.innerWidth, height: window.innerHeight, backgroundColor: '#95ebff', pixelArt: true, physics: { default: 'arcade', arcade: { gravity: { y: 1200 } } }, scene: { preload, create, update } };
-    function startGame(){ if(!game) game = new Phaser.Game(config); else game.scene.scenes[0].scene.restart(); }
+// --- NEWBI CONFIG FUNCTIONS ---
+function openNewbiSettings() {
+    let conf = getStarterPack();
+    document.getElementById('newbi-gems').value = conf.gems;
+    const list = document.getElementById('newbi-items-list');
+    list.innerHTML = "";
+    Object.keys(conf.items).forEach(id => {
+        addNewbiItemRow(id, conf.items[id]);
+    });
+    document.getElementById('newbi-modal').style.display = 'block';
+    if(game) game.scene.scenes[0].input.keyboard.clearCaptures();
+}
 
-    function preload(){
-        let g=this.make.graphics({x:0,y:0,add:false});
-        g.clear();g.fillStyle(0xFFE4B5,1);g.fillRect(0,0,20,30);g.generateTexture('char_body',20,30);
+function addNewbiItemRow(id = "", qty = 1) {
+    const d = document.createElement('div');
+    d.className = 'config-row';
+    d.innerHTML = `
+        <input type="number" class="config-input i-id" placeholder="ID" value="${id}">
+        <input type="number" class="config-input i-qty" placeholder="Qty" value="${qty}">
+        <button onclick="this.parentElement.remove()" style="background:red;color:white;border:none;">X</button>
+    `;
+    document.getElementById('newbi-items-list').appendChild(d);
+}
+
+function saveNewbiSettings() {
+    let gems = parseInt(document.getElementById('newbi-gems').value) || 0;
+    let items = {};
+    document.querySelectorAll('#newbi-items-list .config-row').forEach(row => {
+        let id = parseInt(row.querySelector('.i-id').value);
+        let qty = parseInt(row.querySelector('.i-qty').value);
+        if(id > 0 && qty > 0) items[id] = qty;
+    });
+    
+    saveNewbiConfig({ gems: gems, items: items });
+    logChat("System: Newbi Starter Pack Updated!", "info");
+    document.getElementById('newbi-modal').style.display = 'none';
+}
+
+// --- GAME ---
+const config = { type: Phaser.AUTO, width: window.innerWidth, height: window.innerHeight, backgroundColor: '#95ebff', pixelArt: true, resolution: 1, fps: { target: 60, forceSetTimeOut: true }, physics: { default: 'arcade', arcade: { gravity: { y: 1200 }, debug: false } }, scene: { preload, create, update } };
+let game, playerContainer, playerBody, playerHand, nameTag, map, layer, dropsGroup, keysWASD, keyShift, keyEnter, keyEsc;
+let isPunching=false, facingRight=true, isChatting=false, isModalOpen=false, isDancing=false;
+let blockHealthMap={}, hotbar=[0,null,null,null], selectedSlotIndex=0; 
+let currentChatBubble = null; 
+const TILE_SIZE=32, MAP_W=100, MAP_H=60;
+
+function startGame(){ if(!game) game=new Phaser.Game(config); else game.scene.scenes[0].scene.restart(); }
+
+function preload(){
+    let g=this.make.graphics({x:0,y:0,add:false});
+    g.clear();g.fillStyle(0xFFE4B5,1);g.fillRect(0,0,20,30);g.fillStyle(0xFFFFFF,1);g.fillRect(0,15,20,15);g.generateTexture('char_body',20,30);
+    g.clear();g.fillStyle(0xFFE4B5,1);g.fillCircle(6,6,6);g.generateTexture('char_hand',12,12);
+    this.load.image('tex_1', 'assets/dirt.png'); 
+    this.load.image('tex_2', 'assets/bedrock.png');
+    this.load.image('tex_3', 'assets/rock.png');
+    this.load.image('tex_6', 'assets/door.png');
+    this.load.image('tex_9', 'assets/wl.png');
+    let ig=this.make.graphics({x:0,y:0,add:false});
+    ig.clear();ig.fillStyle(0x00FFFF,1);ig.fillTriangle(0,10,5,0,10,10);ig.generateTexture('gem_blue',10,20);
+    ig.clear();ig.fillStyle(0xFFFF00,1);ig.fillTriangle(0,10,5,0,10,10);ig.generateTexture('gem_yellow',10,20);
+    ig.clear();ig.fillStyle(0x00FF00,1);ig.fillTriangle(0,10,5,0,10,10);ig.generateTexture('gem_green',10,20);
+    ig.clear();ig.fillStyle(0xFF00FF,1);ig.fillTriangle(0,10,5,0,10,10);ig.generateTexture('gem_purple',10,20);
+    Object.keys(BLOCKS).forEach(id=>{if(id!=0){let def=BLOCKS[id];ig.clear();ig.fillStyle(def.color,1);ig.fillRect(0,0,10,10);ig.generateTexture('item_'+id,10,10);}});
+}
+
+function create(){ 
+    let textureWidth = 32 * 20; 
+    let canvas = this.textures.createCanvas('tiles', textureWidth, 32);
+    let ctx = canvas.context;
+    Object.keys(BLOCKS).forEach(id => {
+        if(id == 0) return;
+        let def = BLOCKS[id];
+        let posX = id * 32;
+        ctx.fillStyle = '#' + def.color.toString(16).padStart(6,'0');
+        ctx.fillRect(posX, 0, 32, 32);
+        if(def.type==='lock'){ctx.fillStyle='#000';ctx.fillRect(posX+12,5,8,8);}
+        if(def.type==='door'){ctx.fillStyle='#888';ctx.fillRect(posX+12,10,8,22);}
+        if (this.textures.exists('tex_' + id)) {
+            let img = this.textures.get('tex_' + id).getSourceImage();
+            if(img.width > 0 && img.height > 0) ctx.drawImage(img, 0, 0, img.width, img.height, posX, 0, 32, 32);
+        }
+    });
+    canvas.refresh();
+    this.time.delayedCall(500,()=>{document.getElementById('loading-screen').style.display='none';document.getElementById('ui-layer').style.display='block';initGameWorld(this);}); 
+    setTimeout(()=>{document.getElementById('loading-screen').style.display='none';document.getElementById('ui-layer').style.display='block';}, 3000);
+}
+
+function getDoorSpawn(dataMap) {
+    for(let y=0; y<MAP_H; y++) {
+        for(let x=0; x<MAP_W; x++) {
+            if(dataMap[y][x] === 6) return {x: x*TILE_SIZE + 16, y: y*TILE_SIZE + 16};
+        }
     }
+    return {x: 10*TILE_SIZE, y: 200}; 
+}
 
-    function create(){
-        let textureWidth=32*20, canvas=this.textures.createCanvas('tiles',textureWidth,32), ctx=canvas.context;
-        Object.keys(BLOCKS).forEach(id=>{
-            if(id==0)return; let d=BLOCKS[id],posX=id*32;
-            ctx.fillStyle='#'+d.color.toString(16).padStart(6,'0'); ctx.fillRect(posX,0,32,32);
+// GANTI FUNGSI initGameWorld DENGAN INI (Fix Async Loading)
+async function initGameWorld(scene){
+    let targetWorld = backpack.lastWorld || "START"; 
+    // Menunggu data world asli dari Firebase
+    const data = await loadWorld(targetWorld); 
+    
+    document.getElementById('world-name').innerText = currentWorldName; 
+    updateUI();
+    clearChat(); 
+    logChat(`System: Welcome to FakeTopia World: ${currentWorldName}`, "info");
+
+    map = scene.make.tilemap({data: data.map, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE});
+    const tileset = map.addTilesetImage('tiles'); 
+    layer = map.createLayer(0, tileset, 0, 0);
+    let colIds = Object.keys(BLOCKS).filter(k => BLOCKS[k].type !== 'fist' && BLOCKS[k].type !== 'door').map(Number);
+    map.setCollision(colIds);
+    
+    scene.physics.world.bounds.width = MAP_W * TILE_SIZE; 
+    scene.physics.world.bounds.height = MAP_H * TILE_SIZE;
+    
+    dropsGroup = scene.add.group(); 
+    if(data.drops) data.drops.forEach(d => spawnFloatingItem(scene, d.x, d.y, d.id, d.amount, false, 0, d.uid, true));
+
+    let spawn = getDoorSpawn(data.map);
+    playerContainer = scene.add.container(spawn.x, spawn.y); 
+    playerContainer.setSize(20,30); 
+    scene.physics.world.enable(playerContainer);
+    
+    playerBody = scene.add.sprite(0,0,'char_body'); 
+    playerHand = scene.add.sprite(8,5,'char_hand');
+    nameTag = scene.add.text(0,-25, backpack.username, {fontSize:'12px',fontStyle:'bold'}).setOrigin(0.5).setStroke('#000',3);
+    
+    playerContainer.add([playerBody, playerHand, nameTag]);
+    playerContainer.body.setCollideWorldBounds(true).setDragX(800); 
+    scene.physics.add.collider(playerContainer, layer);
+    
+    scene.cameras.main.startFollow(playerContainer, true, 0.1, 0.1).setZoom(1.5);
+    keysWASD = scene.input.keyboard.addKeys('W,A,S,D'); 
+    keyShift = scene.input.keyboard.addKey('SHIFT');
+
+    // --- MULTIPLAYER PRESENCE LISTENER ---
+    db.ref('presence/' + currentWorldName).on('value', snapshot => {
+        const players = snapshot.val();
+        if(!players) return;
+        Object.keys(players).forEach(name => {
+            if(name === backpack.username) return;
+            if(!otherPlayers[name]){
+                otherPlayers[name] = scene.add.container(players[name].x, players[name].y);
+                let b = scene.add.sprite(0,0,'char_body');
+                let t = scene.add.text(0,-25, name, {fontSize:'10px', backgroundColor: '#000'});
+                otherPlayers[name].add([b,t]);
+            }
+            otherPlayers[name].x = players[name].x;
+            otherPlayers[name].y = players[name].y;
+            if(otherPlayers[name].list[0]) otherPlayers[name].list[0].scaleX = players[name].flip;
         });
-        canvas.refresh();
-        document.getElementById('loading-screen').style.display='none';
-        document.getElementById('ui-layer').style.display='block';
-        initGameWorld(this);
-    }
+    });
+}
 
-    async function initGameWorld(scene){
-        let t = backpack.lastWorld || "START";
-        const data = await loadWorld(t); // FIX: Menunggu data world dari Firebase
-        
-        document.getElementById('world-name').innerText = currentWorldName;
-        map = scene.make.tilemap({ data: data.map, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
-        const tileset = map.addTilesetImage('tiles');
-        layer = map.createLayer(0, tileset, 0, 0);
-        map.setCollision(Object.keys(BLOCKS).filter(k=>BLOCKS[k].type!=='fist'&&BLOCKS[k].type!=='door').map(Number));
-        
-        playerContainer = scene.add.container(200, 200);
-        playerContainer.setSize(20, 30); scene.physics.world.enable(playerContainer);
-        playerBody = scene.add.sprite(0,0,'char_body');
-        nameTag = scene.add.text(0,-25, backpack.username, {fontSize:'12px',fontStyle:'bold'}).setOrigin(0.5);
-        playerContainer.add([playerBody, nameTag]);
-        playerContainer.body.setCollideWorldBounds(true).setDragX(1000);
-        scene.physics.add.collider(playerContainer, layer);
-        scene.cameras.main.startFollow(playerContainer, true, 0.1, 0.1).setZoom(1.5);
-        keysWASD = scene.input.keyboard.addKeys('W,A,S,D');
+function update(){
+    if(playerContainer && playerContainer.body) {
+    db.ref('presence/' + currentWorldName + '/' + backpack.username).set({
+        x: playerContainer.x, 
+        y: playerContainer.y, 
+        flip: playerBody.scaleX
+    });
+}
+    if(currentChatBubble){currentChatBubble.x=playerContainer.x;currentChatBubble.y=playerContainer.y-50;}
+    if(isChatting||isModalOpen||isDancing){playerContainer.body.setAccelerationX(0);return;}
+    let ml = (keysWASD && keysWASD.A.isDown) || mobileState.left;
+    let mr = (keysWASD && keysWASD.D.isDown) || mobileState.right;
+    let mj = (keysWASD && keysWASD.W.isDown) || mobileState.jump;
+    if(ml){playerContainer.body.setAccelerationX(-1000);facingRight=false;playerBody.scaleX=-1;playerHand.x=-8;}
+    else if(mr){playerContainer.body.setAccelerationX(1000);facingRight=true;playerBody.scaleX=1;playerHand.x=8;}
+    else{playerContainer.body.setAccelerationX(0);}
+    if(mj&&playerContainer.body.onFloor()){playerContainer.body.setVelocityY(-600);}
+    if(!mj&&playerContainer.body.velocity.y<-200){playerContainer.body.setVelocityY(-200);}
+}
 
-        // MULTIPLAYER LISTENER (Biar bisa liat player lain)
-        db.ref('presence/' + currentWorldName).on('value', snapshot => {
-            const players = snapshot.val();
-            if(!players) return;
-            Object.keys(players).forEach(name => {
-                if(name === backpack.username) return;
-                if(!otherPlayers[name]){
-                    otherPlayers[name] = scene.add.container(players[name].x, players[name].y);
-                    let b = scene.add.sprite(0,0,'char_body');
-                    let t = scene.add.text(0,-25, name, {fontSize:'10px', backgroundColor:'#000'});
-                    otherPlayers[name].add([b,t]);
+function spawnFloatingItem(s,x,y,id,amt,manual,immune,uid,restore){
+    let tex=id==='gem'?'gem':'item_'+id;
+    if(id==='gem'){if(amt>=100)tex='gem_purple';else if(amt>=50)tex='gem_green';else if(amt>=10)tex='gem_yellow';else tex='gem_blue';}
+    let merged = false;
+    if(id!=='gem'&&!restore){
+        s.physics.overlapCirc(x, y, 30).forEach(body => {
+            let container = body.gameObject;
+            if(container && container.getData && container.getData('id') === id && !merged) {
+                let newTotal = container.getData('amount') + amt;
+                if(newTotal <= 200) {
+                    container.setData('amount', newTotal);
+                    container.getAt(1).setText(newTotal.toString()); 
+                    updateWorldDropAmount(container.getData('uid'), newTotal);
+                    merged = true;
                 }
-                otherPlayers[name].x = players[name].x;
-                otherPlayers[name].y = players[name].y;
-            });
+            }
         });
-        updateUI();
     }
+    if(!merged){
+        let container = s.add.container(x, y);
+        let sprite = s.add.sprite(0, 0, tex);
+        if(sprite.width > 32) sprite.setDisplaySize(20, 20); 
+        let lbl = s.add.text(0, 15, amt.toString(), {fontSize:'10px',color:'#FFF',stroke:'#000',strokeThickness:2}).setOrigin(0.5);
+        container.add([sprite, lbl]);
+        container.setSize(30, 30);
+        s.physics.world.enable(container);
+        container.body.setAllowGravity(false);
+        let u=uid||(Date.now()+Math.random());
+        container.setData('id',id);
+        container.setData('amount',amt);
+        container.setData('immune',immune||0);
+        container.setData('uid',u);
+        s.tweens.add({targets:container, y:y-10, yoyo:true, repeat:-1, duration:800}); 
+        dropsGroup.add(container);
+        if(!restore)addWorldDrop(x,y,id,amt,u);
+        s.physics.add.overlap(playerContainer, container, collectItem, null, s);
+    }
+}
 
-    function update(){
-        if(!playerContainer) return;
-        let ml = keysWASD.A.isDown; let mr = keysWASD.D.isDown; let mj = keysWASD.W.isDown;
-        if(ml){ playerContainer.body.setAccelerationX(-1200); }
-        else if(mr){ playerContainer.body.setAccelerationX(1200); }
-        else playerContainer.body.setAccelerationX(0);
-        if(mj && playerContainer.body.onFloor()) playerContainer.body.setVelocityY(-600);
-        
-        // Broadcast posisi ke Cloud
-        db.ref('presence/' + currentWorldName + '/' + backpack.username).set({
-            x: playerContainer.x, y: playerContainer.y
-        });
-    }
+function collectItem(p,i){
+    if(!i || !i.scene || !i.body) return;
+    if(Date.now()<i.getData('immune'))return;
+    let id=i.getData('id'),amt=i.getData('amount');
+    if(id==='gem')addGems(amt);else addItem(id,amt);
+    removeWorldDrop(i.getData('uid'));
+    if(i.body) i.body.enable = false;
+    i.destroy(); 
+    updateUI();
+}
 
-    function updateUI(){ document.getElementById('gem-count').innerText=backpack.gems; renderHotbar(); }
-    function renderHotbar(){
-        const b = document.getElementById('inventory-bar'); b.innerHTML = "";
-        hotbar.forEach((id, i) => {
-            let d = document.createElement('div');
-            d.className = `inv-item ${i === selectedSlotIndex ? 'active' : ''}`;
-            d.innerHTML = `<span class="inv-count">${id === 0 ? "∞" : (backpack.items[id] || 0)}</span>`;
-            b.appendChild(d);
-        });
+function updateUI(){document.getElementById('gem-count').innerText=backpack.gems||0;renderHotbar();updateWorldInfo();}
+function renderHotbar(){const c=document.getElementById('inventory-bar');c.innerHTML="";hotbar.forEach((id,i)=>{if(i!==0&&id===null)return;let d=document.createElement('div');d.className=`inv-item ${i===selectedSlotIndex?'active':''}`;d.onclick=()=>selectHotbarSlot(i);let n="Empty",cnt="",col="transparent";if(id===0){n="Fist";cnt="∞";col="#FFE4B5";}else if(id!==null){let def=BLOCKS[id];n=def?def.name:"???";cnt=backpack.items[id]||0;col=def?'#'+def.color.toString(16).padStart(6,'0'):'#FFF';if(cnt<=0){hotbar[i]=null;renderHotbar();return;}}d.innerHTML=`<div class="color-preview" style="background:${col}"></div><img src="assets/item_${id}.png" class="icon-img" onerror="this.style.display='none'"><span class="inv-name">${n}</span><span class="inv-count">${cnt}</span>`;c.appendChild(d);});}
+function selectHotbarSlot(i){selectedSlotIndex=i;renderHotbar();}
+function toggleBackpack(){let m=document.getElementById('backpack-modal');if(m.style.display==='block')closeModals();else{renderBackpackGrid();m.style.display='block';isModalOpen=true;if(game)game.scene.scenes[0].input.keyboard.clearCaptures();}}
+function renderBackpackGrid(){const g=document.getElementById('backpack-grid');g.innerHTML="";let keys=Object.keys(backpack.items).filter(k=>backpack.items[k]>0);for(let i=0;i<25;i++){let s=document.createElement('div');s.className="pack-slot";if(i<keys.length){let id=parseInt(keys[i]);let def=BLOCKS[id];let c=def?'#'+def.color.toString(16).padStart(6,'0'):'#FFF';s.innerHTML=`<div class="color-preview" style="background:${c}"></div><img src="assets/item_${id}.png" class="icon-img" onerror="this.style.display='none'"><span style="position:absolute;bottom:0;right:2px;font-size:10px;font-weight:bold;text-shadow:1px 1px 0 #000;z-index:2">${backpack.items[id]}</span>`;s.onclick=()=>equipItemToHotbar(id);}g.appendChild(s);}}
+function equipItemToHotbar(id){let idx=hotbar.indexOf(id);if(idx!==-1)selectHotbarSlot(idx);else{if(selectedSlotIndex===0){let e=hotbar.indexOf(null);if(e!==-1){hotbar[e]=id;selectHotbarSlot(e);}else{hotbar[1]=id;selectHotbarSlot(1);}}else{hotbar[selectedSlotIndex]=id;}}closeModals();renderHotbar();}
+function updateWorldInfo(){let o=getWorldOwner();let t=document.getElementById('world-owner');if(!o||o===""||o==="null"){t.innerText="No Owner (Public)";t.style.color="#FFFF00";}else{t.innerText=`Owner: ${o}`;t.style.color=(o===backpack.username)?"#00FF00":"#FF0000";}}
+function spawnDrops(s,x,y,id){let def=BLOCKS[id];if(!def)return;if(def.type==='lock'){spawnFloatingItem(s,x*32+16,y*32+16,id,1,false,0);return;}if(Math.random()<0.4)spawnFloatingItem(s,x*32+16,y*32+16,id,1,false,0);if(def.farmable&&Math.random()<0.8)spawnFloatingItem(s,x*32+16,y*32+16,'gem',Phaser.Math.Between(5,10),false,0);}
+function updatePlayerNameColor(){if(!nameTag)return;let o=backpack.role==='owner',w=(getWorldOwner()===backpack.username);if(o){nameTag.setText('@'+backpack.username);nameTag.setColor('#FF0000');}else if(w){nameTag.setText(backpack.username);nameTag.setColor('#00FF00');}else{nameTag.setText(backpack.username);nameTag.setColor('#FFFFFF');}}
+function openDropUI(){if(backpack.items[hotbar[selectedSlotIndex]]<=0||hotbar[selectedSlotIndex]===0)return;isModalOpen=true;document.getElementById('drop-num').max=backpack.items[hotbar[selectedSlotIndex]];document.getElementById('drop-modal').style.display='block';if(game)game.scene.scenes[0].input.keyboard.clearCaptures();}
+function openMenu(){document.getElementById('menu-modal').style.display='block';isModalOpen=true;if(game)game.scene.scenes[0].input.keyboard.clearCaptures();}
+function confirmDrop(){let a=parseInt(document.getElementById('drop-num').value),id=hotbar[selectedSlotIndex];if(a>0&&backpack.items[id]>=a){removeItem(id,a);let px=playerContainer.x,py=playerContainer.y;spawnFloatingItem(game.scene.scenes[0],px+(facingRight?50:-50),py,id,a,true,Date.now()+2000);closeModals();updateUI();}}
+function startDance(){if(isDancing)return;isDancing=true;let e=game.scene.scenes[0].time.addEvent({delay:250,callback:()=>{playerBody.scaleX*=-1;if(playerContainer.body.onFloor())playerContainer.body.setVelocityY(-200);},loop:true});game.scene.scenes[0].time.delayedCall(3000,()=>{isDancing=false;e.remove();playerBody.scaleX=facingRight?1:-1;});}
+
+function handleAction(p,s){
+    if(isChatting||isModalOpen||isDancing)return;
+    let wp=p.positionToCamera(s.cameras.main);
+    if(wp.x<playerContainer.x&&facingRight){facingRight=false;playerBody.scaleX=-1;playerHand.x=-8;}
+    else if(wp.x>playerContainer.x&&!facingRight){facingRight=true;playerBody.scaleX=1;playerHand.x=8;}
+    let tx=map.worldToTileX(wp.x),ty=map.worldToTileY(wp.y);
+    if(Phaser.Math.Distance.Between(playerContainer.x,playerContainer.y,wp.x,wp.y)>120)return;
+    if(!isPunching){isPunching=true;s.tweens.add({targets:playerHand,x:playerHand.x+(facingRight?15:-15),duration:80,yoyo:true,onComplete:()=>isPunching=false});}
+    let t=map.getTileAt(tx,ty);
+    let aid=hotbar[selectedSlotIndex]; if(aid===null)return; 
+    let owner=getWorldOwner(); if(!owner||owner===""||owner==="null")owner=null; 
+    let isPublic=(owner===null), isOwner=(owner===backpack.username), hasAccess=(isPublic||isOwner);
+    let isRoleOwner = (backpack.role === 'owner'); 
+
+    if(keyShift.isDown){ 
+        if(aid===0)return; 
+        if(!hasAccess){showFloatingText(s,wp.x,wp.y,"Locked!","#FF0000");return;} 
+        if((!t||t.index===0)&&backpack.items[aid]>0){
+            if(aid===9){ if(!isPublic){showFloatingText(s,wp.x,wp.y,"Already Locked!","#FFFF00");return;} setWorldOwner(backpack.username); updateUI(); updatePlayerNameColor();}
+            map.putTileAt(aid,tx,ty);
+            if(typeof updateWorldBlock==='function')updateWorldBlock(tx,ty,aid);
+            removeItem(aid,1); delete blockHealthMap[`${tx},${ty}`]; updateUI();
+        }
+    }else{ 
+        if(t&&t.index!==0){ 
+            if(t.index===6 || t.index===2) {
+                if(isOwner || isRoleOwner) {} else { showFloatingText(s,wp.x,wp.y,"It's Strong!","#FFFFFF"); return; }
+            }
+            if(t.index===9){ if(!isOwner && !isRoleOwner){showFloatingText(s,wp.x,wp.y,"Locked!","#FF0000");return;} }
+            else { if(!hasAccess && !isRoleOwner){showFloatingText(s,wp.x,wp.y,"Locked!","#FF0000");return;} }
+            let k=`${tx},${ty}`;
+            if(!blockHealthMap[k])blockHealthMap[k]=BLOCKS[t.index]?BLOCKS[t.index].hp:3;
+            blockHealthMap[k]--; t.alpha=0.5; s.time.delayedCall(100,()=>t?t.alpha=1:null);
+            if(blockHealthMap[k]<=0){
+                spawnDrops(s,tx,ty,t.index);
+                map.removeTileAt(tx,ty);
+                if(typeof updateWorldBlock==='function')updateWorldBlock(tx,ty,0);
+                delete blockHealthMap[k];
+                if(t.index===9){setWorldOwner(null);updateUI();updatePlayerNameColor();}
+            }
+        }
     }
-    function doLogout(){ localStorage.removeItem('gt_active_session'); location.reload(); }
+}
+
+function showFloatingText(s,x,y,m,c){let t=s.add.text(x,y-20,m,{fontSize:'12px',color:c,stroke:'#000',strokeThickness:2}).setOrigin(0.5);s.tweens.add({targets:t,y:y-50,alpha:0,duration:800,onComplete:()=>t.destroy()});}
+function openShop(){isModalOpen=true;const l=document.getElementById('shop-list');l.innerHTML="";SHOP_ITEMS.forEach(i=>{let c=document.createElement('div');c.className="shop-card";c.innerHTML=`<div style="width:20px;height:20px;background:${i.color};margin:0 auto;"></div><b>${i.name}</b><br><span class="shop-price">${i.price} 💎</span><br><small>x${i.amount}</small>`;c.onclick=()=>{if(removeGems(i.price)){addItem(i.id,i.amount);updateUI();}else alert("No Gems!");};l.appendChild(c);});document.getElementById('shop-modal').style.display='block';if(game)game.scene.scenes[0].input.keyboard.clearCaptures();}
+function initBuy(index){selectedShopItem=SHOP_ITEMS[index];if(!selectedShopItem)return;document.getElementById('buy-name').innerText=selectedShopItem.name;document.getElementById('buy-price').innerText=selectedShopItem.price;document.getElementById('buy-amount').value=1;updateBuyTotal();document.getElementById('buy-modal').style.display='block';}
+function updateBuyTotal(){let amt=parseInt(document.getElementById('buy-amount').value)||0;if(amt<1)amt=1;let total=amt*selectedShopItem.price;document.getElementById('buy-total').innerText=total;}
+function executeBuy(){let amt=parseInt(document.getElementById('buy-amount').value);if(amt<1){alert("Invalid Amount!");return;}let totalCost=amt*selectedShopItem.price;if(backpack.gems>=totalCost){if(removeGems(totalCost)){addItem(selectedShopItem.id,selectedShopItem.amount*amt);alert(`Successfully bought ${amt}x ${selectedShopItem.name}!`);updateUI();document.getElementById('buy-modal').style.display='none';}}else{alert("Not enough gems!");}}
+function closeModals(){isModalOpen=false;document.getElementById('shop-modal').style.display='none';document.getElementById('backpack-modal').style.display='none';document.getElementById('drop-modal').style.display='none';document.getElementById('menu-modal').style.display='none';document.getElementById('buy-modal').style.display='none';document.getElementById('newbi-modal').style.display='none';if(game)game.scene.scenes[0].input.keyboard.addCapture([32,37,38,39,40]);}
+
+function forceOpenChat() {
+    openChatUI();
+    document.getElementById('chat-input').focus();
+}
+
+function openChatUI() {
+    if(isChatting) return;
+    isChatting = true;
+    let el = document.getElementById('chat-input-container');
+    let inp = document.getElementById('chat-input');
+    el.style.display = 'block';
+    inp.focus();
+    game.scene.scenes[0].input.keyboard.clearCaptures(); 
+}
+
+function closeChatUI() {
+    isChatting = false;
+    document.getElementById('chat-input-container').style.display = 'none';
+    document.getElementById('chat-input').blur();
+    game.scene.scenes[0].input.keyboard.addCapture([32,37,38,39,40]);
+}
+
+function sendChat() {
+    let inp = document.getElementById('chat-input');
+    let txt = inp.value.trim();
+    if(txt !== '') {
+        if(txt === '/help') {
+            let role = backpack.role;
+            let msg = "Available Commands:<br>";
+            msg += "/warp &lt;name&gt; - Go to world<br>";
+            msg += "/sb &lt;msg&gt; - Super Broadcast<br>";
+            msg += "/dance - Dance animation<br>";
+            if (role === 'owner') {
+                msg += "<span style='color:#FF0000'>--- OWNER ---</span><br>";
+                msg += "/osb &lt;msg&gt; - Owner Broadcast<br>";
+                msg += "/jsb &lt;msg&gt; - Jammed Broadcast<br>";
+                msg += "/give &lt;id&gt; &lt;amount&gt; - Give items<br>";
+                msg += "/givegems &lt;user&gt; &lt;amount&gt;<br>";
+                msg += "/addowner &lt;user&gt; - Add Role Owner<br>";
+                msg += "/removeowner &lt;user&gt;<br>";
+                msg += "/resetworld &lt;name&gt; - Delete World<br>";
+                msg += "/setnewbi - Config Starter Pack<br>";
+                msg += "/listowner<br>";
+            }
+            logChat(msg, "info");
+        }
+        else if(txt.startsWith('/sb ')){
+            let now = Date.now(); let lastSB = backpack.lastSB || 0;
+            if(backpack.role !== 'owner' && now - lastSB < 60000) {
+                let rem = Math.ceil((60000 - (now - lastSB)) / 1000); logChat(`System: Wait ${rem}s for SB!`, "system");
+            } else {
+                let msg = txt.substring(4); let onlineCount = Object.keys(getAllUsers()).length; let cost = 50 + onlineCount;
+                if(backpack.gems >= cost) {
+                    removeGems(cost); updateUI(); showSuperBroadcast(backpack.username, msg, currentWorldName); logChat(`[SB] ${backpack.username}: ${msg}`, "sb");
+                    backpack.lastSB = now; savePlayer();
+                } else { logChat("System: Not enough gems!", "system"); }
+            }
+        }
+        else if(txt.startsWith('/jsb ')){
+            if(backpack.role !== 'owner') logChat("System: No Permission!", "system");
+            else { showSuperBroadcast(backpack.username, txt.substring(5), "JAMMED"); logChat(`[SB] [JAMMED] ${backpack.username}: ${txt.substring(5)}`, "sb"); }
+        }
+        else if(txt.startsWith('/osb ')){
+            if(backpack.role !== 'owner') logChat("System: No Permission!", "system");
+            else { showOwnerBroadcast(backpack.username, txt.substring(5)); logChat(`[OSB] ${backpack.username}: ${txt.substring(5)}`, "osb"); }
+        }
+        else if(txt.startsWith('/setnewbi')) {
+            if(backpack.role !== 'owner') logChat("System: No Permission!", "system");
+            else { openNewbiSettings(); }
+        }
+        else if(txt==='/dance'){startDance();logChat("*starts dancing*");}
+        else if(txt.startsWith('/givegems')){
+            if(backpack.role!=='owner')logChat("System: You don't have permission!","system");
+            else{let p=txt.split(' ');if(p.length===3&&p[1]===backpack.username){addGems(parseInt(p[2]));updateUI();logChat(`System: Gave gems to ${p[1]}`,"info");}}
+        }
+        else if(txt.startsWith('/warp')){
+            let p=txt.split(' ');
+            if(p.length===2){
+                let name = p[1].toUpperCase();
+                if(/^[A-Z0-9]+$/.test(name)) { 
+                    document.getElementById('loading-screen').style.display='flex';
+                    document.getElementById('ui-layer').style.display='none';
+                    setTimeout(() => {
+                        setPlayerLocation(name); saveWorld(); loadWorld(name); 
+                        game.scene.scenes[0].scene.restart(); 
+                        setTimeout(() => { location.reload(); }, 500);
+                    }, 100);
+                } else { logChat("System: Invalid Name (Only A-Z 0-9)!","system"); }
+            }
+        }
+        else if(txt.startsWith('/resetworld ')){
+            if(backpack.role !== 'owner') logChat("System: No Permission!", "system");
+            else {
+                let p = txt.split(' ');
+                if(p.length === 2) {
+                    let targetW = p[1].toUpperCase();
+                    if(localStorage.getItem('gt_world_' + targetW)) {
+                        localStorage.removeItem('gt_world_' + targetW);
+                        logChat(`System: World ${targetW} has been deleted.`, "info");
+                        if(currentWorldName === targetW) { setTimeout(() => { location.reload(); }, 1000); }
+                    } else { logChat(`System: World ${targetW} not found.`, "system"); }
+                }
+            }
+        }
+        else if(txt.startsWith('/give')){
+            if(backpack.role!=='owner')logChat("System: You don't have permission!","system");
+            else{let p=txt.split(' ');if(p.length===3){addItem(parseInt(p[1]),parseInt(p[2]));updateUI();logChat(`System: Gave items`,"info");}}
+        }
+        else if(txt.startsWith('/addowner')){
+            if(backpack.role!=='owner')logChat("System: No Access!","system");
+            else{let p=txt.split(' ');if(p.length===2){let r=db_updateRole(p[1].toLowerCase(),'owner');logChat(r.msg,"info");}}
+        }
+        else if(txt.startsWith('/removeowner')){
+            if(backpack.role!=='owner')logChat("System: No Access!","system");
+            else{let p=txt.split(' ');if(p.length===2){let r=db_updateRole(p[1].toLowerCase(),'player');logChat(r.msg,"info");}}
+        }
+        else if(txt.startsWith('/listowner')){let o = db_getOwners(); logChat("Owners: "+o.join(", "),"info");}
+        else { 
+            if(!txt.startsWith('/')) showPlayerChat(txt); 
+            logChat(`<${backpack.username}> ${txt}`, "normal"); 
+        }
+    }
+    inp.value = '';
+    closeChatUI();
+}
 </script>
 </body>
 </html>
